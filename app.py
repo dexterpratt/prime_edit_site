@@ -1,39 +1,44 @@
 from flask import Flask, render_template, request, send_file
 import io
 import csv
-from funs import fun1, fun2, fun3  # placeholder module
+from funs import validate_inputs, generate_triples, score_triples
 
 app = Flask(__name__)
+
+DEFAULTS = {
+    'text_field': 'AGCTAGCTAGCTAGCTAGCT',
+    'int_field': 5,
+    'char_field': 'A'
+}
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     error_msg = None
     table_data = None
+    form_data = DEFAULTS.copy()
     if request.method == 'POST':
-        s = request.form.get('text_field', '')
+        form_data['text_field'] = request.form.get('text_field', DEFAULTS['text_field'])
         try:
-            i = int(request.form.get('int_field', 0))
-            c = request.form.get('char_field', '')
-            ok, msg = fun1(s, i, c)
-            if not ok:
-                error_msg = msg
-            else:
-                arr = fun2(s, i, c)    # shape (n,3)
-                rows = fun3(arr)     # shape (n,4)
-                # Combine and sort by score descending
-                #rows = [row + [score] for row, score in zip(arr, scores)] old / MK
-                rows.sort(key=lambda x: x[-1], reverse=True)
-                table_data = rows
+            form_data['int_field'] = int(request.form.get('int_field', DEFAULTS['int_field']))
         except Exception:
-            import traceback; error_msg = traceback.format_exc()
-    return render_template('index.html', error_msg=error_msg, table_data=table_data)
+            form_data['int_field'] = DEFAULTS['int_field']
+        form_data['char_field'] = request.form.get('char_field', DEFAULTS['char_field'])
+        ok, msg = validate_inputs(form_data['text_field'], form_data['int_field'], form_data['char_field'])
+        if not ok:
+            error_msg = msg
+        else:
+            triples = generate_triples(form_data['text_field'], form_data['int_field'], form_data['char_field'])
+            rows = score_triples(triples)
+            rows.sort(key=lambda x: x[-1], reverse=True)
+            table_data = rows
+    return render_template('index.html', error_msg=error_msg, table_data=table_data, **form_data)
 
 @app.route('/download', methods=['POST'])
 def download():
     data = request.get_json()['data']
     si = io.StringIO()
     cw = csv.writer(si)
-    cw.writerow([f'col{i}' for i in range(1,6)] + ['score'])
+    cw.writerow(['Spacer', 'PBS', 'RTT', 'Score'])
     cw.writerows(data)
     mem = io.BytesIO()
     mem.write(si.getvalue().encode('utf-8'))
