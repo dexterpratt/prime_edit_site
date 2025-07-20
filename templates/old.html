@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+  head>
+    <meta charset="utf-8">
+    <title>Prototype Tool</title>
+
+    <!-- Google Fonts: Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Material Web Import Map -->
+    <script type="importmap">
+      {
+        "imports": {
+          "@material/web/": "https://esm.run/@material/web/"
+        }
+      }
+    </script>
+
+    <!-- Material Web Core + Typography + Data Table -->
+    <script type="module">
+      import '@material/web/all.js';
+      import '@material/web/data-table/data-table.js';
+      // Import the CSS as a JS module and push onto adoptedStyleSheets
+      import {styles as dataTableStyles} from '@material/web/data-table/data-table.css.js';
+      import {styles as typescaleStyles} from '@material/web/typography/md-typescale-styles.js';
+      document.adoptedStyleSheets.push(typescaleStyles.styleSheet, dataTableStyles.styleSheet);
+    </script>
+    <!-- Fallback <link> for browsers without Constructible Stylesheets support -->
+    <link rel="stylesheet" href="https://unpkg.com/@material/web/data-table/data-table.css">
+
+    <style>
+      html, body {
+        font-family: 'Roboto', sans-serif;
+      }
+    </style>
+    <script>
+      function downloadCSV() {
+        const data = {{ table_data|tojson }};
+        fetch('/download', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({data})
+        })
+        .then(r => r.blob())
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'results.csv';
+          a.click();
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <h1 class="md-typescale-display-medium">Web Tool Prototype</h1>
+    <form method="post">
+      <label>String: <input type="text" name="text_field" required></label><br>
+      <label>Integer: <input type="number" name="int_field" required></label><br>
+      <label>Character: <input type="text" name="char_field" maxlength="1" required></label><br>
+      <button type="submit">Submit</button>
+    </form>
+    {% if error_msg %}
+      <pre style="color:red;">{{ error_msg }}</pre>
+    {% endif %}
+    {% if table_data %}
+      <!-- Material Web Component Data Table -->
+      <md-data-table>
+        <md-data-table-header-row>
+          {% for i in range(5) %}
+            <md-data-table-header-cell>Col {{ i+1 }}</md-data-table-header-cell>
+          {% endfor %}
+          <md-data-table-header-cell>Score</md-data-table-header-cell>
+        </md-data-table-header-row>
+        <md-data-table-row-group>
+          {% for row in table_data %}
+            <md-data-table-row>
+              {% for cell in row %}
+                <md-data-table-cell>{{ cell }}</md-data-table-cell>
+              {% endfor %}
+            </md-data-table-row>
+          {% endfor %}
+        </md-data-table-row-group>
+      </md-data-table>
+      <button onclick="downloadCSV()">Download CSV</button>
+    {% endif %}
+  </body>
+</html>

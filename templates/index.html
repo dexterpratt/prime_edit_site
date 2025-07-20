@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Prototype Tool</title>
+    <script>
+      function downloadCSV() {
+        const data = {{ table_data|tojson }};
+        fetch('/download', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({data})
+        })
+        .then(r => r.blob())
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'results.csv';
+          a.click();
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <h1>Web Tool Prototype</h1>
+    <form method="post">
+      <label>String: <input type="text" name="text_field" required></label><br>
+      <label>Integer: <input type="number" name="int_field" required></label><br>
+      <label>Character: <input type="text" name="char_field" maxlength="1" required></label><br>
+      <button type="submit">Submit</button>
+    </form>
+    {% if error_msg %}
+      <pre style="color:red;">{{ error_msg }}</pre>
+    {% endif %}
+    {% if table_data %}
+      <table border="1">
+        <thead>
+          <tr>
+          <th>Spacer</th><th>PBS</th><th>RTT</th><th>Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in table_data %}
+            <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <button onclick="downloadCSV()">Download CSV</button>
+    {% endif %}
+  </body>
+</html>
